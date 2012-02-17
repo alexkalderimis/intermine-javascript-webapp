@@ -1,0 +1,217 @@
+@import url(http://fonts.googleapis.com/css?family=Alegreya);
+@import url(http://fonts.googleapis.com/css?family=Muli);
+
+.tag {
+    float: right;
+}
+
+.label {
+    margin-right: 0.15em;
+}
+
+#lists li {
+    border-bottom: 1px solid #ededed;
+    padding: 0.2em;
+}
+
+#lists li a {
+    font-weight: bold;
+}
+
+#lists li .description {
+    display: none;
+}
+
+.label {
+    padding: 0.2em 0.3em 0.1em 0.4em;
+    line-height: 1.2em;
+    display: inline-block;
+}
+
+body {
+    font-family: 'Muli', "Helvetica", sans-serif;
+    padding-top: 40px;
+}
+
+p.description {
+    width: 80%;
+    font-size: 2em;
+    line-height: 1.3em;
+    font-family: 'Alegreya', serif;
+}
+
+.btn i {
+    margin-left: 2em;
+}
+
+.progress {
+    margin-top: 5em;
+    max-width: 80%;
+}
+
+.display-area {
+    padding: 1em 0em 1em 0em;
+}
+
+.grid-item {
+    display: inline-block;
+    width: 12em;
+    margin: 1em;
+}
+
+.grid-item.well {
+    min-height: 6em;
+    padding: 1em;
+}
+
+.field {
+    margin: 0 0.2em 0 0.2em;
+    display: inline-block;
+    white-space: nowrap;
+    padding: 0.1em;
+}
+
+.field.primary {
+    border: none;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.2em;
+}
+
+.label-other {
+    background-color: #3a50ad;
+}
+
+.label-other2 {
+    background-color: #923aad;
+}
+
+.tag-text {
+    display: none;
+}
+
+.field.collection {
+    border: 1px solid #f89406;
+    border-radius: 3px;
+    margin: 0.1em;
+}
+
+.display-area select {
+    display: inline;
+}
+
+.dashboard .well {
+    width: 20em;
+    height: 10em;
+    margin: 1em;
+    display: inline-block;
+    float: left;
+}
+
+.selected {
+  border-color: rgba(82, 168, 236, 0.8);
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+  -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+.dashboard .well a {
+    font-weight: bold;
+    margin-right: 2em;
+}
+
+.dashboard .well .description {
+    font-size: 1em;
+    display: block;
+    width: 100%;
+}
+
+.dashboard .well .tag {
+    display: inline-block;
+    float: none;
+    margin-left: 0.5em;
+}
+
+.btn-group {
+    float: right;
+    margin-left: 1em;
+    margin-right: 1em;
+}
+
+.well .btn-group {
+    display: inline-block;
+    float: none;
+}
+
+.well .btn-group a .caret {
+    float: right;
+}
+
+.list-display {
+    padding-top: 2em;
+}
+
+#lists-to-delete, #lists-we-cannot-delete {
+    overflow: auto;
+    max-height: 10em;
+}
+
+.con-path li {
+    display: inline-block;
+}
+
+#facet-bar {
+    margin-top: 1em;
+}
+
+li.active-facet {
+    list-style-type: none;
+    width: 100%;
+    padding: 0.2em;
+    border-top: 1px solid #ddd;
+}
+
+li.active-facet:hover {
+    font-weight: bold;
+}
+
+.active-facet a:hover {
+    text-decoration: none;
+}
+
+ul.active-facets {
+    margin: 0.2em;
+}
+
+.main {
+    padding-left: 0;
+}
+
+#sidebar-left-contents {
+    border-top: none;
+    border-left: none;
+}
+
+#sidebar-left.minimized {
+    width: 3%;
+    float: left;
+}
+
+.minimized .well {
+    height: 1000px;
+}
+
+.seen-tags .tag {
+    white-space: nowrap;
+    float: none;
+}
+
+.seen-tags .tag i {
+    margin-left: 0.3em;
+}
+
+.seen-tags .tag .tag-text {
+    display: inline;
+}
+
+
