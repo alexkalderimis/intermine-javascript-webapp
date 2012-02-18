@@ -2,6 +2,28 @@ if (!window.Assets) {
     window.Assets = {};
 }
 
+(function() {
+_.extend(window.Assets, {
+    FacetView: {
+        infoBox: '<div class="alert alert-info"><p>Click a facet to remove it from the filter</p><ul class="active-facets"></ul></div>',
+        facetT: _.template('<a href=#><b><%= name %></b>: <%= value %></a>'),
+        newListButton: '\
+       <a class="btn btn-primary" href="#list-creation-diag" data-toggle="modal"> \
+            <i class="icon-list-alt icon-white"></i>         \
+            Save as a new list                               \
+        </a>',
+        newTagInput: '\
+        <form class="form-inline">  \
+         <fieldset class="control-group">  \
+          <input class="input-short" type="text" name="tag-name" placeholder="Tag name">  \
+         </fieldset>  \
+          <button type="submit" class="btn">Add</button> \
+       </form>',
+        newTagMissingError: '<span class=help-inline>No tag name</span>'
+       
+    }
+});
+})();
 
 (function() {
 
