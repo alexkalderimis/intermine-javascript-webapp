@@ -50,8 +50,9 @@
     <link rel="stylesheet" type="text/css" href="public/css/resulttables.css">
     
     <!-- the app itself -->
-    <script src="public/javascripts/App.js"></script>
-    <link href="public/css/new-style.css" rel="stylesheet">
+    <script src="public/assets/templates.js"></script> <!-- HTML templates -->
+    <script src="public/javascripts/App.js"></script> <!-- Views and logic -->
+    <link href="public/css/new-style.css" rel="stylesheet"> <!-- Style     -->
 
 
   </head>
@@ -148,27 +149,65 @@
 
     <!-- notifications -->
     <ul id="notifications"></ul>
+      <div class="modal" id="list-creation-diag" style="display: none">
+        <div class="modal-header">
+            <a class="close" data-dismiss="modal">x</a>
+            <h3>Create A New List</h3>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-block alert-error" style="display: none">
+                <a class=close data-dismiss="alert">x</a>
+                <h4 class="alert-heading">Error</h4>
+                <p>
+                    There was a problem saving your list.
+                </p>
+                <p>
+                    You must provide a name for your list, and it may not 
+                    contain any special characters.
+                </p>
+            </div>
+            <p>
+               Provide a name and a description (optional) for your new list
+            </p>
+            <form class="well form-search row-fluid" id="new-list-details">
+            <input type="text" name="name" class="span3" placeholder="Name">
+            <input type="text" name="desc" class="span8" placeholder="Description">
+            </form>
+            <h4>Click on tags to delete them, or click in the box to add new ones</h4>
+            <ul class="well inherited-tags"></ul>
+            <div class="progress progress-info progress-striped active" 
+                style="display: none">
+                <div class="bar" style="width: 100%"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn btn-primary">OK, create a new list</a>
+            <a href="#" class="btn btn-cancel">cancel</a>
+        </div>
+    </div>
+
 
     <div class="modal" id="confirm-delete" style="display: none">
         <div class="modal-header">
             <a class="close" data-dismiss="modal">x</a>
-            <h3>Confirm List Deletion</h3>
+            <h3>confirm list deletion</h3>
         </div>
         <div class="modal-body">
             <div class="alert alert-block">
                 <a class=close>x</a>
-                <h4 class="alert-heading">Warning</h4>
-                <p>Not all the selected lists belong to you. You can only delete your own lists.</p>
-                <p>The following lists cannot be deleted:</p>
+                <h4 class="alert-heading">warning</h4>
+                <p>not all the selected lists belong to you. you can only delete your own lists.</p>
+                <p>the following lists cannot be deleted:</p>
                 <ul id="lists-we-cannot-delete"></ul>
             </div>
-            <p>Do you really want to delete the selected lists? This operation cannot be undone.</p>
-            <h4>Selected lists:</h4>
+            <p>do you really want to delete the selected lists? this operation cannot be undone.</p>
+            <h4>selected lists:</h4>
             <ul id="lists-to-delete"></ul>
         </div>
         <div class="modal-footer">
-            <a href="#" class="btn btn-primary">Yes, delete <span id="list-sel-count"></span> lists</a>
-            <a href="#" class="btn btn-cancel">Cancel</a>
+            <a href="#" class="btn btn-primary">yes, delete <span id="list-sel-count"></span> lists</a>
+            <a href="#" class="btn btn-cancel">cancel</a>
         </div>
+    </div>
   </body>
 </html>
