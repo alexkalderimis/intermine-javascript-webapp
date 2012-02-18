@@ -263,7 +263,7 @@
 
     var DashBoardCell = ListLi.extend({
         tagName: "div",
-        className: "list-item well",
+        className: "list-item well dashboard-cell",
         addTooltip: function() {}
     });
 
@@ -498,6 +498,13 @@
                            var tag = new NewListTag(t);
                            $tbox.append(tag.el);
                        });
+                       // Add tags for active facets
+                       _(activeFacets).each(function(af) {
+                           var tag = new NewListTag(af.name + ":" + af.value);
+                           $tbox.append(tag.el);
+                       });
+
+
                        var tagFormAdder = function() {
                            var $tagForm = $(Assets.FacetView.newTagInput);
                            $tagForm.appendTo($tbox);
@@ -732,6 +739,47 @@
 
     });
 
+    var ListDashBoard = Backbone.View.extend({
+
+        initialize: function() {
+            _.bindAll(this, "render");
+            this.setElement(document.getElementById("content"));
+            this.$el.empty();
+            this.render();
+            var tagChangeHandler = function() {
+                if (self.$('.dashboard-cell').filter(':visible').length < 1) {
+                    self.$('.absence-message').show();
+                } else {
+                    self.$('.absence-message').hide();
+                }
+            };
+            App.Mediator.bind("tag-selected", tagChangeHandler);
+            App.Mediator.bind("tag-removed", tagChangeHandler);
+        },
+
+        render: function() {
+            var self = this;
+            var toolBar = new DashBoardHeader({collection: self.collection});
+            self.$el.append(toolBar.el);
+            var mainContent = self.make("div", {"class": "row-fluid"});
+            var dashBoard = self.make("div", {"class": "dashboard span10"});
+            $(dashBoard).append('<h1 class="absence-message">no lists</h3>');
+            $(mainContent).append(dashBoard);
+            var tagBox = self.make("div", {"class": "seen-tags span2"});
+            $(tagBox).append('<h3><i class=icon-tags></i>&nbsp;Tags</h3>');
+            _(seen_tags).each(function(t) {
+                var tag = new Tag(t, {collapsible: false});
+                $(tagBox).append(tag.el);
+            });
+            $(mainContent).append(tagBox);
+            self.$el.append(mainContent);
+            self.collection.each(function(list) {
+                var cell = new DashBoardCell({model: list});
+                $(dashBoard).append(cell.render().el);
+            });
+            return this;
+        }
+    });
 
     var ListsView = Backbone.View.extend({
 
@@ -769,26 +817,10 @@
 
         },
 
+        // TODO: should be own view...
         showDashBoard: function() {
             var self = this;
-            var $centre = $('#content').empty();
-            var toolBar = new DashBoardHeader({collection: self.collection});
-            $centre.append(toolBar.el);
-            var mainContent = self.make("div", {"class": "row-fluid"});
-            var dashBoard = self.make("div", {"class": "dashboard span10"});
-            $(mainContent).append(dashBoard);
-            var tagBox = self.make("div", {"class": "seen-tags span2"});
-            $(tagBox).append('<h3><i class=icon-tags></i>&nbsp;Tags</h3>');
-            _(seen_tags).each(function(t) {
-                var tag = new Tag(t, {collapsible: false});
-                $(tagBox).append(tag.el);
-            });
-            $(mainContent).append(tagBox);
-            $centre.append(mainContent);
-            self.collection.each(function(list) {
-                var cell = new DashBoardCell({model: list});
-                $(dashBoard).append(cell.render().el);
-            });
+            new ListDashBoard({collection: self.collection});
             return this;
         },
 
