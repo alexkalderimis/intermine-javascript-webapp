@@ -19,6 +19,13 @@
         user: "Showing only items that belong to you"
     };
 
+    var isUserTag = function(t) {
+        if (t === "im:favourite") {
+            return true; // The exception
+        } 
+        return !(t.substring(0, 3) == "im:");
+    };
+
     var publish = function() {
         var args = Array.prototype.slice.call(arguments);
         console.debug(arguments);
@@ -62,13 +69,25 @@
             click: "clickHandler"
         },
 
-        hoverHandler: function() {if (!this.noHover) {this.$('.tag-text').animate({width: 'toggle'}, 100)}},
-        clickHandler: function() { App.Mediator.trigger("tag-selected", this.text); return false;},
+        hoverHandler: function() {
+            if (this.collapsible) {
+                this.$('.tag-text').animate({width: 'toggle'}, 100)
+            }
+        },
+        clickHandler: function() { 
+            if (this.isFilter) {
+                App.Mediator.trigger("tag-selected", this.text); 
+            }
+            return false;
+        },
 
-        initialize: function(text, noHover) {
+        initialize: function(text, opts) {
             _.bindAll(this, "render", "clickHandler", "hoverHandler");
+            opts = opts || {};
+            _.defaults(opts, {collapsible: true, isFilter: true});
             this.text = text;
-            this.noHover = noHover;
+            this.isFilter = opts.isFilter;
+            this.collapsible = opts.collapsible;
             this.$el.addClass(getTagLabelClass(text));
             this.render();
         },
@@ -76,6 +95,21 @@
         render: function() {
             this.$el.append(this.tagTemplate({text: this.text}));
             return this;
+        }
+    });
+
+    var NewListTag = Tag.extend({
+
+        hoverHandler: function() {},
+        clickHandler: function() {
+            this.$el.remove();
+            return false;
+        },
+        initialize: function(text) {
+            _.bindAll(this, "render", "clickHandler", "hoverHandler");
+            this.text = text;
+            this.$el.addClass(getTagLabelClass(text));
+            this.render();
         }
     });
 
@@ -215,7 +249,8 @@
                 });
             }
             _(tags).chain()
-                .filter(function(t) {return !(t.substring(0, 3) == "im:")})
+                .filter(isUserTag)
+                .without("im:favourite")
                 .each(function(t) {
                     var tag = new Tag(t);
                     self.$el.append(tag.el);
@@ -443,14 +478,87 @@
             });
 
             if (!_(activeFacets).isEmpty()) {
-                var $infoBox = $('<div class="alert alert-info"><p>Click a facet to remove it from the filter</p><ul class="active-facets"></ul></div>');
-                var ft = _.template('<a href=#><b><%= name %></b>: <%= value %></a>');
+                var $infoBox = $(Assets.FacetView.infoBox);
+                var ft = Assets.FacetView.facetT;
                 _(activeFacets).each(function(f) {
                     var af = self.make("li", {"class": "active-facet"}, ft(f));
                     $(af).click(function() { self.model.trigger("facet-removed", f)});
                     $infoBox.find('ul').append(af);
                 });
                 self.$el.append($infoBox);
+                $(Assets.FacetView.newListButton).appendTo(self.el).click(
+                    function() {
+                       var $diag = $('#list-creation-diag');
+                       var $tbox = $diag.find('.inherited-tags')
+                                        .empty();
+                       $diag.find('.alert').hide();
+                       $diag.find('.btn').removeClass("disabled");
+                       var tags = self.model.get("tags");
+                       __(tags).filter(isUserTag).each(function(t) {
+                           var tag = new NewListTag(t);
+                           $tbox.append(tag.el);
+                       });
+                       var tagFormAdder = function() {
+                           var $tagForm = $(Assets.FacetView.newTagInput);
+                           $tagForm.appendTo($tbox);
+                           $tbox.unbind("click"); /*.click(function(evt) {
+                               if (evt.currentTarget.nodeName == "FORM") {
+                                   return;
+                               }
+                               console.log(evt.currentTarget.nodeName);
+                               $tagForm.remove();
+                               $tbox.click(tagFormAdder);
+                               return false;
+                           }); */
+                           $tagForm.submit(function() {
+                               var $input = $tagForm.find("input");
+                               var tagName = $input.val();
+                               if (!tagName) {
+                                   $tagForm.find("fieldset").addClass("error")
+                                    .append(Assets.FacetView.newTagMissingError);
+                               } else {
+                                   var newTag = new NewListTag(tagName);
+                                   $tbox.append(newTag.el);
+                                   $tagForm.remove();
+                                   $tbox.unbind("click").click(tagFormAdder);
+                               }
+                               return false;
+                           });
+                       };
+                       $tbox.click(tagFormAdder);
+                       $diag.find('.btn-cancel').click(function() {
+                           $diag.modal('hide');
+                       });
+                       $diag.find('.btn-primary').click(function() {
+                           $diag.find('.btn').unbind('click').addClass("disabled");
+                           $diag.find('.progress').show();
+                           var $nld = $diag.find('#new-list-details');
+                           var name = $nld.find('input[name~="name"]').val();
+                           var desc = $nld.find('input[name~="desc"]').val();
+                           var tags = $tbox.find('.tag-text').map(function() {
+                               return $(this).text();
+                           }).get();
+                           var details = {
+                               name: name, 
+                               description: desc, 
+                               tags: tags
+                           };
+                           var success = function() {
+                               $diag.find('.progress').hide();
+                               $diag.modal('hide');
+                               new ListsView(true);
+                           };
+                           var error = function() {
+                               $diag.find('.progress').hide();
+                               $diag.find('.alert').show();
+                           };
+
+                           App.im.query(query, function(q) {
+                                q.saveAsList(details).then(success, error);
+                           });
+                       });
+                    }
+                );
             }
 
             var dl = self.make("dl");
@@ -588,43 +696,37 @@
 
         render: function() {
             var self = this;
-            var btnTemplate = _.template('<a class="disabled needs-input" href="#" id="aggregate-<%= id %>"><%= title %></a>');
-
-            var $btns = $('<div class="btn-group" id="list-aggregate-buttons">').appendTo(self.el);
-            var buttons = [
-              {id: "union", title: "Merge"},
-              {id: "intersection", title: "Intersect"},
-              {id: "difference", title: "Difference"}
-            ];
-            var $aggregator = $(btnTemplate(buttons[0])).appendTo($btns).addClass("btn");
-            $btns.append('<a class="btn dropdown-toggle disabled needs-input" data-toggle="dropdown" href="#"><span class=caret></span></a>');
-            var dd = self.make("ul", {"class": "dropdown-menu"});
-            $btns.append(dd);
-            _(buttons).each(function(b) {
-                var $li = $("<li>").appendTo(dd);
-                $(btnTemplate(b)).appendTo($li).click(function() {$aggregator.text(b.title)});
+            var $listCombiners = $(Assets.DashBoardHeader.listOperations);
+            $listCombiners.find('li a').click(function() {
+                $listCombiners.find('#combine-main').text($(this).text());
+            });
+            $listCombiners.appendTo(self.el).tooltip({
+                selector: 'a', 
+                placement: 'left'
             });
 
-            var $deleter = $('<a class="btn disabled needs-input" title="Delete the selected lists" data-content="Permanently delete the selected lists. You may only delete lists that belong to you. These lists are marked with the <i class=icon-user></i> symbol" href="#confirm-delete">Delete</a>').appendTo($('<div class="btn-group">').appendTo(self.el));
-            var $btns2 = $('<div class="btn-group" id="list-aggregate-buttons-2">');
-            var $clearer = $('<a class="btn" title="Deselect the selected lists" data-content="Click here to unselect all the selected lists below" href="#">Clear Selection</a>').click(function() {
-                self.collection.each(function(list) {list.trigger("clear-selection")});
+            var $deleter = $(Assets.DashBoardHeader.deleter).appendTo(self.el);
+
+            var $selectionControls = $(Assets.DashBoardHeader.selectionButtons)
+                                        .appendTo(self.el);
+            $selectionControls.find('.clearer').click(function() {
+                self.collection.each(function(list) {
+                    list.trigger("clear-selection")
+                });
             });
-            var $selector = $('<a class="btn" title="Invert selection" data-content="Select all unselected lists, and unselect all currently selected ones" href="#">Toggle Selection</a>').click(function() {
+            $selectionControls.find('.toggler').click(function() {
                 self.collection.each(function(list) {list.trigger("selection")});
             });
             self.collection.bind("selection", self.setEnabledState);
             self.collection.bind("clear-selection", self.setEnabledState);
-            $btns2.append($clearer).append($selector).appendTo(self.el);
             // Heading
-            $(self.el).append(self.make("h2", {}, "Lists in FlyMine"));
-            $deleter.popover({placement: 'bottom'})
+            self.$el.append(self.make("h2", {}, "Lists in FlyMine"));
+            $deleter.find('a').popover({placement: 'bottom'})
                     .click(function() {$(this).popover('hide')})
                     .click(function() {if (!$(this).hasClass('disabled')) {
                         var selector = $(this).attr('href');
                         $(selector).modal('show');
                     } });
-            $btns.tooltip({selector: 'a', placement: 'left'});
             return self;
         }
 
@@ -633,7 +735,7 @@
 
     var ListsView = Backbone.View.extend({
 
-        initialize: function() {
+        initialize: function(noDash) {
             this.el = $('#lists').empty();
             var self = this;
             _.bindAll(this, 'render', 'appendList', 'showDashBoard'); // all "methods" listed here.
@@ -643,7 +745,7 @@
 
             App.Mediator.state.selectedTags = [];
 
-            this.render(true);
+            this.render(!noDash);
 
             App.Mediator.bind("tag-selected", function(tag) {
                 App.Mediator.state.selectedTags = _.union(App.Mediator.state.selectedTags, [tag]);
@@ -678,7 +780,7 @@
             var tagBox = self.make("div", {"class": "seen-tags span2"});
             $(tagBox).append('<h3><i class=icon-tags></i>&nbsp;Tags</h3>');
             _(seen_tags).each(function(t) {
-                var tag = new Tag(t, true);
+                var tag = new Tag(t, {collapsible: false});
                 $(tagBox).append(tag.el);
             });
             $(mainContent).append(tagBox);
@@ -1140,7 +1242,7 @@
 
     });
 
-    var listsView = new ListsView({tags: ["gmoddemo"]});
+    var listsView = new ListsView();
 
     dojo.require("dojo.store.JsonRest");
     dojo.require("dijit.Tree");
