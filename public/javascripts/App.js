@@ -113,6 +113,20 @@
         }
     });
 
+    var DragTag = Tag.extend({
+
+        hoverHandler: function() {},
+        clickHandler: function() {},
+
+        initialize: function(text) {
+            _.bindAll(this, "render", "clickHandler", "hoverHandler");
+            this.text = text;
+            this.$el.addClass(getTagLabelClass(text));
+            this.render();
+        }
+
+    });
+
     var ListLi = Backbone.View.extend({
         tagName: 'li',
         className: 'list-item',
@@ -223,6 +237,7 @@
 
         render: function() {
             var self = this;
+            self.$el.empty();
             self.addTooltip();
             $(self.el).append(self.make('a', {href: '#'}, self.model.get('name')));
             $(self.el).append(self.make('span', {}, self.model.get('size') + " " + self.model.get("type") + "s"));
@@ -264,7 +279,38 @@
     var DashBoardCell = ListLi.extend({
         tagName: "div",
         className: "list-item well dashboard-cell",
-        addTooltip: function() {}
+        addTooltip: function() {},
+
+        initialize: function() {
+            var self = this;
+            ListLi.prototype.initialize.call(this);
+            this.model.on('change:tags', this.render);
+            this.$el.droppable( {
+                drop: function(evt, ui) {
+                    var draggable = ui.draggable;
+                    var tag = $(draggable).find('.tag-text').text();
+                    if (_(self.model.get("tags")).include(tag)) {
+                        return false;
+                    }
+                    console.log("You want me to have the tag: " + tag);
+                    var name = self.model.get("name");
+                    var req = {name: self.model.get("name"), tags: tag};
+                    App.im.makeRequest("list/tags", req, null, "POST")
+                          .fail(function() { 
+                              console.log(arguments);
+                              alert("Problem adding tag") 
+                          })
+                          .done(function() { 
+                        App.im.fetchLists(function(ls) {
+                            var updated = _(ls).find(function(l) {
+                                return l.name === name;
+                            });
+                            self.model.set("tags", updated.tags);
+                        });
+                    });
+                }
+            });
+        }
     });
 
     var ListDisplay = Backbone.View.extend({
@@ -770,6 +816,11 @@
             _(seen_tags).each(function(t) {
                 var tag = new Tag(t, {collapsible: false});
                 $(tagBox).append(tag.el);
+                tag.$el.draggable( {
+                    cursor: 'move', 
+                    containment: 'document',
+                    helper: function() { return new DragTag(t).el }
+                });
             });
             $(mainContent).append(tagBox);
             self.$el.append(mainContent);
@@ -784,7 +835,7 @@
     var ListsView = Backbone.View.extend({
 
         initialize: function(noDash) {
-            this.el = $('#lists').empty();
+            this.setElement(document.getElementById('lists'));
             var self = this;
             _.bindAll(this, 'render', 'appendList', 'showDashBoard'); // all "methods" listed here.
 
@@ -1274,14 +1325,15 @@
 
     });
 
-    var listsView = new ListsView();
 
     dojo.require("dojo.store.JsonRest");
     dojo.require("dijit.Tree");
     dojo.require("dijit.Menu");
 
-    $(function() {
+    var init = function() {
+        var listsView = new ListsView();
         var listsModal = new ListsModal();
+
         $('#sidebar-hider').click(function() {
             $('#lists').animate({width: "toggle"}, 100);
             $('#list-search').toggle();
@@ -1295,7 +1347,7 @@
             $('#services-selector').find('li').toggleClass('active');
             $('.entry-points li').removeClass("active");
             $('.entry-points li').first().addClass("active");
-            new ListsView();
+            listsView.render(true);
         });
 
         $('#list-search').keyup(function() {
@@ -1307,12 +1359,15 @@
             new TemplatesView();
             new QueryView();
         });
+
         $('#lists-page').click(function() {
             $('.entry-points li').removeClass("active");
             $(this).addClass("active");
-            new ListsView();
+            listsView.render(true);
         });
 
-    });
+    };
+
+    $( init );
 
 }).call(this);
