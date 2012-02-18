@@ -214,4 +214,13 @@ ul.active-facets {
     display: inline;
 }
 
+.modal .row-fluid {
+    width: 90%;
+}
+
+.modal .tag .tag-text {
+    display: inline;
+    font-size: 1.1em;
+}
+
 
