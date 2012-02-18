@@ -33,6 +33,7 @@ _.extend(intermine, (function() {
         this.makeRequest = function(path, data, cb, method) {
             var url = this.root + path;
             data = data || {};
+            cb = cb || function() {};
             if (this.token) {
                 data.token = this.token;
             }
