@@ -225,11 +225,12 @@ ul.active-facets {
 
 .absence-message {
     display: none;
-    color: #ccc;
+    color: #ddd;
     font-weight: bold;
     font-size: 10em;
     text-transform: uppercase;
-    padding: 1em;
+    padding: 0.5em;
+    line-height: 1.2em;
 }
 
 
