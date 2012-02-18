@@ -26,6 +26,17 @@
         return !(t.substring(0, 3) == "im:");
     };
 
+    var failer = function(defaultMsg) {return function(xhr, err, message) {
+        var respbody = xhr.responseText;
+        if (respbody) {
+            var resp = JSON.parse(respbody);
+            alert(resp.error);
+        } else {
+            console.log(arguments); 
+            alert(defaultMsg + message);
+        }
+    }};
+
     var publish = function() {
         var args = Array.prototype.slice.call(arguments);
         console.debug(arguments);
@@ -84,7 +95,7 @@
         initialize: function(text, opts) {
             _.bindAll(this, "render", "clickHandler", "hoverHandler");
             opts = opts || {};
-            _.defaults(opts, {collapsible: true, isFilter: true});
+            _.defaults(opts, {collapsible: false, isFilter: true});
             this.text = text;
             this.isFilter = opts.isFilter;
             this.collapsible = opts.collapsible;
@@ -131,6 +142,16 @@
         tagName: 'li',
         className: 'list-item',
 
+        tagResponseHandler: function() {
+            var self = this;
+            App.im.fetchLists(function(ls) {
+                var updated = _(ls).find(function(l) {
+                    return l.name === self.model.get("name")
+                });
+                self.model.set("tags", updated.tags);
+            });
+        },
+
         showIfAllowed: function() {
             var self = this;
             var pattern = App.Mediator.state.searchPattern;
@@ -175,7 +196,8 @@
         initialize: function() {
             var self = this;
             _.bindAll(this, 'render', 'show', 'showIfAllowed', 'select', 
-                    'listSelected', 'tagSelected');
+                    'listSelected', 'tagSelected', 'tagResponseHandler',
+                    'hoverHandler');
 
             this.model.on('change:tags', this.render);
             App.Mediator.bind("list-selected", this.listSelected);
@@ -214,8 +236,11 @@
 
         events: {
             'click a': 'show',
-            'click': 'select'
+            'click': 'select',
+            'hover': 'hoverHandler'
         },
+
+        hoverHandler: function() {},
 
         select: function(evt) {
             if (evt.ctrlKey || evt.shiftKey) {
@@ -251,9 +276,42 @@
                     App.Mediator.trigger("tag-selected", "im:favourite");
                     return false;
                 });
+                $(favStar).draggable({
+                    cursor: 'move',
+                    containment: 'document',
+                    start: function() { $(favStar).hide() },
+                    stop: function(evt, ui) { 
+                        var dos = ui.offset;
+                        var oos = self.$el.offset();
+                        var w = self.$el.width();
+                        var h = self.$el.height();
+                        var req = {
+                            name: self.model.get("name"), 
+                            tags: "im:favourite"
+                        };
+                        var msg = "Failed to remove this from your favourites";
+                        if ((dos.left < oos.left) 
+                            || (dos.top < oos.top) 
+                            || (dos.top > (oos.top + h)) 
+                            || (dos.left > (oos.left + w))) {
+                            App.im.makeRequest("list/tags", req, null, "DELETE")
+                                  .fail(failer(msg))
+                                  .done(self.tagResponseHandler);
+                            return false;
+                        }
+                        $(favStar).show(); 
+                    },
+                    helper: function () {return '<h2><i class=icon-star></i></h2>';}
+                });
             } else {
                 favStar = self.make('i', {"class": "icon-star-empty tag"});
-                $(favStar).click(function() {App.Mediator.trigger("no-favs")});
+                var req = {name: self.model.get("name"), tags: 'im:favourite'};
+                $(favStar).click(function() {
+                    App.im.makeRequest("list/tags", req, null, "POST")
+                          .fail(failer("failed to add this to your favourites"))
+                          .done(self.tagResponseHandler);
+                    return false;
+                });
             }
             $(self.el).append(favStar);
             if (_(tags).include("im:public")) {
@@ -272,6 +330,7 @@
                     self.$el.append(tag.el);
                 });
             $(self.el).append(self.make('div', {"style": "clear: both;"}));
+            this.showIfAllowed();
 
             return this;
         },
@@ -281,6 +340,9 @@
         tagName: "div",
         className: "list-item well dashboard-cell",
         addTooltip: function() {},
+        hoverHandler: function() {
+            this.$('.tag-text').animate({width: 'toggle'}, 100);
+        },
 
         initialize: function() {
             var self = this;
@@ -289,6 +351,9 @@
                 drop: function(evt, ui) {
                     var draggable = ui.draggable;
                     var tag = $(draggable).find('.tag-text').text();
+                    if (!tag) {
+                        return false;
+                    }
                     if (_(self.model.get("tags")).include(tag)) {
                         return false;
                     }
@@ -310,6 +375,57 @@
                     });
                 }
             });
+        },
+
+        render: function() {
+            ListLi.prototype.render.call(this);
+            var self = this;
+            self.$('.tag').not('.icon-star').not('.icon-star-empty').draggable({
+                cursor: 'move',
+                containment: 'document',
+                start: function() { 
+                    $(this).hide();
+                },
+                stop: function(evt, ui) {
+                    console.log(this, arguments);
+                    var dos = ui.offset;
+                    var oos = self.$el.offset();
+                    var w = self.$el.width();
+                    var h = self.$el.height();
+                    if ((dos.left < oos.left) 
+                        || (dos.top < oos.top) 
+                        || (dos.top > (oos.top + h)) 
+                        || (dos.left > (oos.left + w))) {
+                        var tag = $(this).find('.tag-text').text();
+                        var req = {name: self.model.get("name"), tags: tag};
+                        App.im.makeRequest("list/tags", req, null, "DELETE")
+                          .fail(function(xhr, err, message) {
+                              var respbody = xhr.responseText;
+                              if (respbody) {
+                                  var resp = JSON.parse(respbody);
+                                  alert(resp.error);
+                              } else {
+                                console.log(arguments); 
+                                alert("Error adding tags: " + message);
+                              }
+                          })
+                          .done(function() {
+                              App.im.fetchLists(function(ls) {
+                                  var updated = _(ls).find(function(l) {
+                                      return l.name === self.model.get("name");
+                                  });
+                                  self.model.set("tags", updated.tags);
+                              });
+                          });
+                        return false;
+                    }
+                    $(this).show(); 
+                },
+                helper: function(evt) {
+                    return new DragTag($(this).find('.tag-text').text()).el;
+                }
+            });
+            return this;
         }
     });
 
