@@ -223,4 +223,14 @@ ul.active-facets {
     font-size: 1.1em;
 }
 
+.absence-message {
+    display: none;
+    color: #ccc;
+    font-weight: bold;
+    font-size: 10em;
+    text-transform: uppercase;
+    padding: 1em;
+}
+
+
 
