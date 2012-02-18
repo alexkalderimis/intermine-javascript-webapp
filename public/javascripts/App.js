@@ -177,6 +177,7 @@
             _.bindAll(this, 'render', 'show', 'showIfAllowed', 'select', 
                     'listSelected', 'tagSelected');
 
+            this.model.on('change:tags', this.render);
             App.Mediator.bind("list-selected", this.listSelected);
             App.Mediator.bind("tag-selected", this.tagSelected); 
             App.Mediator.bind("tag-removed", this.showIfAllowed);
@@ -284,7 +285,6 @@
         initialize: function() {
             var self = this;
             ListLi.prototype.initialize.call(this);
-            this.model.on('change:tags', this.render);
             this.$el.droppable( {
                 drop: function(evt, ui) {
                     var draggable = ui.draggable;
