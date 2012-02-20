@@ -7,6 +7,10 @@
         Preview: {
           root: "preview.flymine.org/preview",
           token: "T1f3e5D8H9f0w7n1U3RaraXk9J8"
+        },
+        TestModel: {
+          root: "risu.flymine.org/intermine-test",
+          token: "test-user-token"
         }
     };
     window.App = {
@@ -76,7 +80,6 @@
         className: "label tag",
 
         events: {
-            hover: "hoverHandler",
             click: "clickHandler"
         },
 
@@ -196,8 +199,7 @@
         initialize: function() {
             var self = this;
             _.bindAll(this, 'render', 'show', 'showIfAllowed', 'select', 
-                    'listSelected', 'tagSelected', 'tagResponseHandler',
-                    'hoverHandler');
+                    'listSelected', 'tagSelected', 'tagResponseHandler');
 
             this.model.on('change:tags', this.render);
             App.Mediator.bind("list-selected", this.listSelected);
@@ -237,10 +239,7 @@
         events: {
             'click a': 'show',
             'click': 'select',
-            'hover': 'hoverHandler'
         },
-
-        hoverHandler: function() {},
 
         select: function(evt) {
             if (evt.ctrlKey || evt.shiftKey) {
@@ -340,13 +339,24 @@
         tagName: "div",
         className: "list-item well dashboard-cell",
         addTooltip: function() {},
-        hoverHandler: function() {
-            this.$('.tag-text').animate({width: 'toggle'}, 100);
+
+        onMouseEnter: function() {
+            this.$('.tag-text').show();
         },
+
+        onMouseExit: function() {
+            this.$('.tag-text').hide();
+        },
+
+        events: _.extend({
+            "mouseenter": "onMouseEnter",
+            "mouseleave": "onMouseExit"
+        }, ListLi.prototype.events),
 
         initialize: function() {
             var self = this;
             ListLi.prototype.initialize.call(this);
+            _.bindAll(this, "onMouseEnter", "onMouseExit");
             this.$el.droppable( {
                 drop: function(evt, ui) {
                     var draggable = ui.draggable;
@@ -539,7 +549,7 @@
             this.$('#grid-btn').addClass("active");
             var type = this.model.get("type");
             var name = this.model.get("name");
-            var fields = ["symbol"];
+            var fields = MAIN_FIELDS[type] || ["id"];
             var query = {select: fields, from: type};
             query.where = _(facets).reduce(function(m, f) {m[f.path] = f.value; return m}, {});
             query.where[type] = {IN: name}; 
@@ -568,17 +578,19 @@
             var tableId = "displayTable_" + self.model.get("name").toLowerCase().replace(/[^a-z]/, "_");
             var resTable = self.make("div", {"id": tableId}); 
             $(resTable).appendTo('.display-area');
-            App.im.fetchSummaryFields(function(sfs) {
-                var query = {
-                    title: "Items in " + self.model.get("title"),
-                    select: sfs[self.model.get("type")],
-                    from: "genomic",
-                    where: [
-                        {path: self.model.get("type"), op: "IN", value: self.model.get("name")}
-                    ]
-                };
-                $(self.progressBar).hide();
-                var t = new InterMine.ResultTable(query, App.im.root, tableId, App.im.token);
+            App.im.fetchModel(function(m) {
+                App.im.fetchSummaryFields(function(sfs) {
+                    var query = {
+                        title: "Items in " + self.model.get("title"),
+                        select: sfs[self.model.get("type")],
+                        from: m.name,
+                        where: [
+                            {path: self.model.get("type"), op: "IN", value: self.model.get("name")}
+                        ]
+                    };
+                    $(self.progressBar).hide();
+                    var t = new InterMine.ResultTable(query, App.im.root, tableId, App.im.token);
+                });
             });
         },
 
@@ -593,6 +605,8 @@
         Gene: ["organism.shortName", "proteins.id", "pathways.id", "chromosome.primaryIdentifier", 
             "length", "primaryIdentifier"],
         Protein: ["gene.symbol", "proteinDomains.identifier"],
+        Employee: ["department.name", "address.address"],
+        Department: ["employees.id"],
     };
 
     var FACETS = {
@@ -602,7 +616,18 @@
             ["Ontology Term", "ontologyAnnotations.ontologyTerm.name"],
             ["Diseases", "diseases.name"],
             ["Organisms", "organism.name"]
-        ]
+        ],
+        Employee: [
+            ["Department", "department.name"],
+            ["Company", "department.company.name"],
+        ],
+    };
+
+    var MAIN_FIELDS = {
+        Gene: ["symbol"],
+        Employee: ["name"],
+        CEO: ["name"],
+        Department: ["name"],
     };
 
     var FacetView = Backbone.View.extend({
@@ -662,7 +687,9 @@
                        });
                        // Add tags for active facets
                        _(activeFacets).each(function(af) {
-                           var tag = new NewListTag(af.name + ":" + af.value);
+                           var tname = af.name + ":" + af.value;
+                           tname = tname.replace(/[^A-Za-z:_\s]/g, "");
+                           var tag = new NewListTag(tname);
                            $tbox.append(tag.el);
                        });
 
@@ -875,6 +902,7 @@
             });
 
             var $deleter = $(Assets.DashBoardHeader.deleter).appendTo(self.el);
+            var $creator = $(Assets.DashBoardHeader.creator).appendTo(self.el);
 
             var $selectionControls = $(Assets.DashBoardHeader.selectionButtons)
                                         .appendTo(self.el);
@@ -1198,14 +1226,17 @@
 
             
             $(runner).click(function() {
-                var query = {
-                    select: self.model.get("view"),
-                    from: "genomic",
-                    where: self.model.get("constraints")
-                };
-                self.$('.editable-constraints').slideUp();
-                $(this).slideUp();
-                var t = new InterMine.ResultTable(query, App.im.root, "template-results-table", App.im.token);
+                App.im.fetchModel(function(m) {
+                    var query = {
+                        select: self.model.get("view"),
+                        from: m.name,
+                        where: self.model.get("constraints")
+                    };
+                    self.$('.editable-constraints').slideUp();
+                    $(this).slideUp();
+                    var t = new InterMine.ResultTable(query, 
+                        App.im.root, "template-results-table", App.im.token);
+                });
             });
 
             $el.append(runner);
@@ -1281,6 +1312,90 @@
 
     });
 
+    var QuickSearchResults =  Backbone.Collection.extend({
+    });
+    var QuickSearchFacets =  Backbone.Collection.extend({
+    });
+
+    var QuickSearchResultView = Backbone.View.extend({
+
+        className: "quick-search-result well",
+
+        initialize: function() {
+            _.bindAll(this, "render");
+            this.render();
+        },
+
+        render: function() {
+            this.$el.append(Assets.QuickSearchResultView.template(this.model.toJSON()));
+        }
+    });
+
+    var QuickSearchFacetView = Backbone.View.extend({
+
+        className: "quick-search-facet",
+        tagName: "dl",
+
+        initialize: function() {
+            _.bindAll(this, "render");
+            this.render();
+        },
+
+        render: function() {
+            var self = this;
+            var ddT = Assets.QuickSearchFacetView.ddTemplate;
+            this.$el.append(this.make("dt", {}, "Category"));
+            _(this.model.get("Category")).each(function(count, type) {
+                self.$el.append(ddT({val: type, count: count}));
+            });
+            __(this.model.toJSON()).keys().without("Category").each(function(cat) {
+                var data = self.model.get(cat);
+                self.$el.append(self.make("dt", {}, cat));
+                _(data).each(function(count, path) {
+                    self.$el.append(ddT({val: path, count: count}));
+                });
+            });
+                
+        }
+    });
+
+    var QuickSearch = Backbone.View.extend({
+
+        className: "quick-search-results",
+
+        initialize: function(results, fs) {
+            _.bindAll(this, "render", "appendSearchResult", "appendFacet");
+            this.setElement(document.getElementById("content"));
+            this.render();
+            this.results = new QuickSearchResults();
+            this.results.bind('add', this.appendSearchResult);
+            this.results.add(results);
+            this.facets = new QuickSearchFacets();
+            this.facets.bind("add", this.appendFacet);
+            this.facets.add(fs);
+        },
+
+        render: function() {
+            var self = this;
+            var $el = this.$el.empty();
+            $el.append(Assets.QuickSearch.header);
+            var $mainBox = $(this.make("div")).appendTo($el);
+            $mainBox.append(Assets.QuickSearch.resultsList);
+            $mainBox.append(Assets.QuickSearch.facetList);
+        },
+
+        appendSearchResult: function(result) {
+            var resView = new QuickSearchResultView({model: result});
+            this.$('.results-list').append(resView.el);
+        },
+
+        appendFacet: function(f) {
+            var v = new QuickSearchFacetView({model: f});
+            this.$('.qs-facets-list').append(v.el);
+        }
+
+    });
+
     var QueryBuilder = Backbone.View.extend({
 
         className: "query-builder",
@@ -1301,12 +1416,14 @@
         loadQueryTable: function() {
             var self = this;
             var q = _.clone(self.query);
-            q.from = "genomic"; // TODO!! unify query format.
-            console.log(q);
-            self.$('#query-results-table').empty();
+            App.im.fetchModel(function(m) {
+                q.from = m.name; // TODO!! unify query format.
+                console.log(q);
+                self.$('#query-results-table').empty();
 
-            tableInitialised = {};
-            new InterMine.ResultTable(q, App.im.root, 'query-results-table', App.im.token);
+                tableInitialised = {};
+                new InterMine.ResultTable(q, App.im.root, 'query-results-table', App.im.token);
+            });
         },
 
         getDijitModel: function() {
@@ -1441,7 +1558,6 @@
 
     });
 
-
     dojo.require("dojo.store.JsonRest");
     dojo.require("dijit.Tree");
     dojo.require("dijit.Menu");
@@ -1450,20 +1566,104 @@
         var listsView = new ListsView();
         var listsModal = new ListsModal();
 
+        var login = function(serviceArgs) {
+            App.im = new intermine.Service(serviceArgs);
+            $('#login-status').toggleClass("logged-in", !!App.im.token);
+
+            App.im.whoami(function(u) {
+                $('#logged-in-notice').show().find('a.username').text(u.username);
+            }).fail(function() {$('#logged-in-notice').hide()});
+            listsView.render(true);
+            App.im.fetchVersion(function(v) {
+                $('.v9').toggleClass('unsupported', (v < 9));
+            }).fail(function() {$('.v9').addClass('unsupported');});
+
+        };
+        var logout = function() {
+            login({root: App.im.root});
+        };
+
+        login(services.Production);
+
         $('#sidebar-hider').click(function() {
-            $('#lists').animate({width: "toggle"}, 100);
+            var duration = $('#lists').is(':visible') ? 0 : 300;
+            $('#lists').animate({width: "toggle"}, duration);
             $('#list-search').toggle();
             $('#sidebar-left').toggleClass('span3 minimized');
             $('#content').toggleClass('span9 span11');
             $(this).toggleClass("icon-backward icon-forward pull-right");
         });
 
+        // TODO: MOVE THIS TO LOGIN VIEW
+        $('.dropdown-menu').find('form').click(function (e) {
+            e.stopPropagation();
+        });
+        $('#start-registration').click(function(e) {
+            $('#registration-fields').slideToggle();
+            e.stopPropagation();
+        });
+
+        $('.modal .btn-cancel').click(function(e) {
+            $(this).closest(".modal").modal("hide");
+            e.stopPropagation();
+        });
+
+        $('#log-out').click(function(e) {logout(); e.stopPropagation();});
+
+        $('#user-changer').click(function(e) {
+            var $that = $(this);
+            var username = $('#new-user').val();
+            var password = $('#new-pass').val();
+            var root = App.im.root;
+            var bytes = Crypto.charenc.Binary.stringToBytes(username + ":" + password);
+            var base64 = Crypto.util.bytesToBase64(bytes);
+            $.ajax({
+                url: root + "user/token",
+                dataType: "json",
+                type: "GET",
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader(
+                        "Authorization", 
+                        "Basic " + base64
+                    );
+                },
+                success: function(result) {
+                    $that.closest(".dropdown").toggleClass("open");
+                    var token = result.token;
+                    login({root: root, token: token});
+                },
+                error: function() {
+                    console.log(arguments);
+                }
+            });
+            e.stopPropagation();
+            
+        });
+
+        $('#quicksearch').submit(function(e) {
+            var term = $(this).find('input').val();
+            console.log(term);
+            App.im.search(term, function(rs, fcts) {
+                new QuickSearch(rs, fcts);
+            });
+            e.stopPropagation();
+        });
+
         $('#service-switcher').find('li').click(function() {
-            App.im = new intermine.Service(services[$(this).text()]);
+            login(services[$(this).text()]);
             $('#services-selector').find('li').toggleClass('active');
             $('.entry-points li').removeClass("active");
             $('.entry-points li').first().addClass("active");
-            listsView.render(true);
+        });
+
+        $('#about-page').click(function() {
+            $('.entry-points li').removeClass("active");
+            $(this).addClass("active");
+            $('#content').load('public/assets/about.html', function() {
+                if ($('#lists').is(':visible')) {
+                    $('#sidebar-hider').click();
+                }
+            });
         });
 
         $('#list-search').keyup(function() {
@@ -1480,6 +1680,9 @@
             $('.entry-points li').removeClass("active");
             $(this).addClass("active");
             listsView.render(true);
+            if (!$('#lists').is(':visible')) {
+                $('#sidebar-hider').click();
+            }
         });
 
     };

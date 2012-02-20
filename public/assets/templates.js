@@ -26,6 +26,31 @@ _.extend(window.Assets, {
 })();
 
 (function() {
+_.extend(window.Assets, {
+    QuickSearch: {
+        header: '<h1>Quick Search Results</h1>',
+        resultsList: '<div class="results-list span9"></div>',
+        facetList: '<div class="span2 qs-facets"><h2>Facets</h2><div class="qs-facets-list"></div></div>'
+    },
+    QuickSearchFacetView: {
+        ddTemplate: _.template('<dd><a href="#"><%= val %> (<%= count %>)</a></dd>')
+    },
+    QuickSearchResultView: {
+        template: _.template(
+        '<h3><%= type %></h3>' + 
+        '<table class="table table-striped table-bordered">' + 
+        '<thead><th>Path</th><th>Value</th></thead>' + 
+        '<tbody>' + 
+        '<% _(fields).each(function(val, path) { %>' + 
+        ' <tr><td class="field-name span3"><% print(path.split(".").join(" &gt; ")); %></td><td class="span9"><%= val %></td></tr>' + 
+        '<% }); %>' + 
+        '</tbody>' + 
+        '</table>')
+    }
+});
+})();
+
+(function() {
 
 // Close over these variables.
 var buttons = {
@@ -67,20 +92,23 @@ You may only delete lists that belong to you.                   \
 These lists are marked with the <i class=icon-user></i> symbol" \
         href="#confirm-delete">                                 \
         Delete                                                  \
+        <i class="icon-trash"></i>                              \
     </a>                                                        \
 </div>',
+        creator: '<a class="btn btn-group" data-toggle="modal" href="#list-upload-diag">'
+            + 'Upload<i class="icon-upload"></i></a>',
         selectionButtons: 
 '<div class=btn-group id=list-selection-controls>               \
   <a class="btn clearer" title="Deselect the selected lists"    \
      data-content="Click here to unselect all the selected lists\
        below"                                                   \
      href=#>                                                    \
-     Clear Selection                                            \
+     Clear                                            \
   </a>                                                          \
   <a class="btn toggler" title="Invert Selection" data-content="Select all \
      selected lists, and unselect all currently selected lists"  \
      href=#>                                                     \
-     Toggle Selection                                            \
+     Toggle                                            \
   </a>                                                           \
 </div>'
     }

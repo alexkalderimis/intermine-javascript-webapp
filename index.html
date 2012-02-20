@@ -17,6 +17,11 @@
     <script src="public/javascripts/bootstrap-tooltip.js"></script>
     <script src="public/javascripts/bootstrap-popover.js"></script>
     <script src="public/javascripts/bootstrap-modal.js"></script>
+    <script src="public/javascripts/bootstrap-tab.js"></script>
+
+    <!-- Base64 enc -->
+    <script type="text/javascript" 
+        src="http://crypto-js.googlecode.com/files/2.5.3-crypto-min.js"></script>
 
     <!-- Dojo - For the model browser tree -->
 
@@ -76,27 +81,77 @@
           <ul class="nav entry-points">
             <li id="lists-page"class="active"><a href="#">Lists</a></li>
             <li id="templates-page"><a href="#">Searches</a></li>
-            <li><a href="#">About</a></li>
+            <li id="about-page"><a href="#">About</a></li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
-              <ul class="dropdown-menu">
-                <li><a href="#">Perl</a></li>
-                <li><a href="#">Python</a></li>
-                <li><a href="#">Ruby</a></li>
-                <li class="divider"></li>
-                <li><a href="#">Java</a></li>
-              </ul>
-            </li>
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Which FlyMine?<b class="caret"></b></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Which Mine?<b class="caret"></b></a>
               <ul class="dropdown-menu" id="service-switcher">
                 <li><a href="#" class=active>Production</a></li>
                 <li><a href="#">Preview</a></li>
+                <li><a href="#">TestModel</a></li>
               </ul>
             </li>
-            <li><a href="https://github.com/alexkalderimis/intermine-javascript-webapp">View Source</a></li>
           </ul>
-
+            <ul id="login-status" class='nav pull-right secondary-nav'>
+                <li id="quick-search-section" class="v9">
+                    <form class="navbar-search pull-left" action="" id="quicksearch">
+                        <input type="text" class="search-query input-medium" placeholder="Search mine...">
+                    </form>
+                </li>
+                <li id="logged-in" class="pull-right">
+                    <span class="navbar-text" id="logged-in-notice">
+                        Logged in as 
+                        <a href="#" class="username"></a>
+                    </span>
+                    <span class="navbar-text">
+                        <a id="log-out" href="#">Log Out</a>
+                    </span>
+                </li>
+                <li class='dropdown pull-right' data-dropdown='dropdown' id="logged-out">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        Login
+                        <b class="caret"></b>
+                    </a>
+                    <div class='dropdown-menu' id="change-user-menu">
+                        <form id="change-user-form">
+                            <div style="margin:0;padding:0;display:inline">
+                            <fieldset class='textbox'>
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-envelope"></i>
+                                    </span>
+                                    <input class="span2" type="text" id="new-user"
+                                        placeholder="email">
+                                </div>
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-user"></i>
+                                    </span>
+                                    <input class="span2" id="new-pass"
+                                        type="password" placeholder="password">
+                                </div>
+                                <div id="registration-fields">
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-user"></i>
+                                    </span>
+                                    <input class="span2"
+                                        type="password" placeholder="confirm password">
+                                </div>
+                                <label for="spamme">Sign up for mailing list?</label>
+                                <input type="checkbox" name="spamme">
+                                </div>
+                            </fieldset>
+                            <fieldset class='subchk'>
+                                <button id="user-changer" class="btn" type="submit">Log-In</button>
+                                <p>
+                                    Don't have an account? 
+                                    <a id="start-registration" href="#">Sign up</a>
+                                </p>
+                            </fieldset>
+                        </form>
+                    </div>
+                </li>
+            </ul>
         </div>
       </div>
     </div>
@@ -119,29 +174,8 @@
         
         <!-- content -->
         <div id="content" class="span9">
-          <!-- crumbs -->
-
-          <!-- lists table -->
-          <!--
-          <table id="table" class="table table-striped">
-            <thead>
-              <tr>
-                <th><input type="checkbox" /></th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          -->
         </div>
 
-        <!-- right sidebar, actions
-        <div class="span2"> -->
-          <!-- actions toolbar -->
-          <div id="toolbar"></div>
-        </div>
       </div>
     </div>
 
@@ -186,6 +220,39 @@
         </div>
         <div class="modal-footer">
             <a href="#" class="btn btn-primary">OK, create a new list</a>
+            <a href="#" class="btn btn-cancel">cancel</a>
+        </div>
+    </div>
+
+    <div class="modal" id="list-upload-diag" style="display: none">
+        <div class="modal-header">
+            <a class="close" data-dismiss="modal">x</a>
+            <h3>Upload A New List</h3>
+        </div>
+        <div class="modal-body">
+            <p>
+                Either select a file to upload, or paste in some identifiers in the box below.
+                Note that the more specific your identifiers the better.
+            </p>
+            <form class="well">
+                <ul class="nav nav-tabs">
+                    <li class="active" ><a data-toggle="tab" href="#file-upload-form">Upload a File</a></li>
+                    <li><a data-toggle="tab" href="#ident-paste-form">Paste in Ids</a></li>
+                </ul>
+                <div id="list-creation-tab-content" class="tab-content">
+                    <div class="in active tab-pane fade" id="file-upload-form">
+                        <label for="file-chooser">Choose a file</label>
+                        <input type="file" name="file-chooser">
+                    </div>
+                    <div class="tab-pane fade" id="ident-paste-form">
+                        <label for="idents">Paste in intentifiers</label>
+                        <input type="textarea" name="idents">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="btn btn-primary">Upload List</a>
             <a href="#" class="btn btn-cancel">cancel</a>
         </div>
     </div>

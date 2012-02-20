@@ -100,12 +100,23 @@ p.description {
     display: inline;
 }
 
-.dashboard .well {
-    width: 20em;
-    height: 10em;
+.dashboard .well, .quick-search-result {
+    width: 18em;
+    min-height: 10em;
     margin: 1em;
     display: inline-block;
     float: left;
+}
+
+.quick-search-result {
+    min-height: 18em;
+    width: 16em;
+}
+
+.field-name {
+    opacity: 0.7;
+    font-family: "Droid mono", "monospace";
+    font-size: 0.7em;
 }
 
 .selected {
@@ -233,5 +244,45 @@ ul.active-facets {
     line-height: 1.2em;
 }
 
+.navbar-text.pull-right {
+    padding-right: 1em;
+}
+#logged-in-notice {
+    display: none;
+}
+
+#change-user-form {
+    padding: 1em;
+}
+
+#change-user-menu {
+    max-width: none;
+    min-width: 20em;
+}
+
+#registration-fields {
+    display: none;
+}
+
+#logged-in {
+    display: none;
+}
+.logged-in #logged-in {
+    display: inline;
+}
+#logged-out {
+    display: inline;
+}
+.logged-in #logged-out {
+    display: none;
+}
+
+#login-status span {
+    padding-right: 1em;
+}
+
+.unsupported {
+    display: none ! important;
+}
 
 

@@ -19,6 +19,7 @@ _.extend(intermine, (function() {
         var MODEL_PATH = "model";
         var SUMMARYFIELDS_PATH = "summaryfields";
         var QUERY_RESULTS_PATH = "query/results";
+        var QUICKSEARCH_PATH = "search";
 
         var LIST_OPERATION_PATHS = {
             merge: "lists/union",
@@ -62,6 +63,28 @@ _.extend(intermine, (function() {
             }
         };
 
+        this.search = function(options, cb) {
+            if (_(options).isString()) {
+                options = {term: options};
+            }
+            if (!cb && _(options).isFunction()) {
+                cb = options;
+                options = {};
+            }
+            options = options || {};
+            cb      = cb      || function() {};
+            _.defaults(options, {term: "", facets: {}});
+            var req = {q: options.term, start: options.start, size: options.size};
+            if (options.facets) {
+                _(options.facets).each(function(v, k) {
+                    req["facet_" + k] = v;
+                });
+            }
+            return this.makeRequest(QUICKSEARCH_PATH, req, function(data) {
+                cb(data.results, data.facets);
+            }, "POST");
+        };
+
         this.count = function(q, cont) {
             var req = {
                 query: q.toXML(),
@@ -78,6 +101,22 @@ _.extend(intermine, (function() {
                     cb(rs[0]);
                 });
             });
+        };
+
+        this.whoami = function(cb) {
+            cb = cb || function() {};
+            var self = this;
+            var promise = jQuery.Deferred();
+            self.fetchVersion(function(v) {
+                if (v < 9) {
+                    var msg = "The who-am-i service requires version 9, this is only version " + v;
+                    promise.reject("not available", msg);
+                } else {
+                    self.makeRequest("user/whoami", null, function(resp) {cb(resp.user)})
+                        .then(promise.resolve, promise.reject);
+                }
+            });
+            return promise;
         };
 
         this.records = function(q, page, cb) {
@@ -120,19 +159,23 @@ _.extend(intermine, (function() {
 
             _.bindAll(this, "fetchVersion", "rows", "records", "fetchTemplates", "fetchLists", 
                 "count", "makeRequest", "fetchModel", "fetchSummaryFields", "combineLists", 
-                "merge", "intersect", "diff", "query");
+                "merge", "intersect", "diff", "query", "whoami");
 
         }, this);
 
         this.fetchVersion = function(cb) {
+            var self = this;
+            var promise = jQuery.Deferred();
             if (typeof this.version === "undefined") {
-                this.makeRequest(VERSION_PATH, null, _.bind(function(data) {
+                this.makeRequest(VERSION_PATH, null, function(data) {
                     this.version = data.version;
                     cb(this.version);
-                }, this));
+                }).fail(promise.reject);
             } else {
                 cb(this.version);
+                promise.resolve(this.version);
             }
+            return promise;
         };
 
         this.fetchTemplates = function(cb) {
