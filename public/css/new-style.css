@@ -285,4 +285,8 @@ ul.active-facets {
     display: none ! important;
 }
 
+.enrichment-matches, .apology {
+    display: none;
+}
+
 

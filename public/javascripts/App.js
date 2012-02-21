@@ -597,6 +597,138 @@
         showWidgets: function() {
             this.$('.btn').removeClass("active");
             this.$('#widget-btn').addClass("active");
+            this.$('.display-area').empty();
+            this.facetView.$el.hide();
+            var widgets = new WidgetView({model: this.model});
+            this.$('.display-area').append(widgets.el);
+        },
+
+
+    });
+
+    var EnrichmentWidgetView = Backbone.View.extend({
+
+        initialize: function(widget, list) {
+            var self = this;
+            self.widget = widget;
+            self.list = list;
+            _.bindAll(this, "render");
+        },
+
+        render: function() {
+            var self = this;
+            self.$el.empty().append(Assets.EnrichmentWidget.table);
+            var req = {
+                widget: self.widget.get("name"),
+                list: self.list.get("name"),
+                maxp: self.$('#max-p-value').val(),
+                correction: $('select[name="correction"]').val()
+            };
+            if (self.widget.get("filters").length) {
+                req.filter = self.$('select[name="filter"]').val();
+            }
+            App.im.enrichment(req, function(rows) {
+                var $t = self.$('table');
+                var t = Assets.EnrichmentWidget.rowTemplate;
+                _(rows).each(function(r) {
+                    r.pvalue = r["p-value"]; // TODO - provide both in json.
+                    var $r = $(t(r)).appendTo($t);
+                });
+                $t.find('.match-count').click(function() {
+                    $(this).next().slideToggle();
+                });
+            });
+        }
+
+    });
+
+    var ChartWidgetView = EnrichmentWidgetView.extend({
+        render: function() {
+        }
+    });
+
+    var WidgetView = Backbone.View.extend({
+        className: "widgets",
+
+        events: {
+            'change select[name="widget"]': 'displayWidget'
+        },
+
+        initialize: function() {
+            _.bindAll(this, "render", "loadWidgets", "displayWidget");
+            var self = this;
+            this.render();
+            this.widgets = new Backbone.Collection();
+            this.loadWidgets();
+        },
+
+        loadWidgets: function() {
+            var self = this;
+            var t = Assets.WidgetView.optionTemplate;
+            App.im.widgets(function(ws) {
+                self.widgets.add(ws);
+                var $sel = self.$('select[name="widget"]').empty();
+                __(ws).groupBy("widgetType").each(function(grp, category) {
+                    var $optGroup = $('<optgroup>').attr("label", category);
+                    _(grp).each(function(x) {
+                        $optGroup.append(t(x));
+                    });
+                    $sel.append($optGroup);
+                    console.log($sel);
+                });
+                $sel.change();
+            });
+        },
+
+        displayWidget: function(e) {
+            var self = this;
+            var selected = $(e.target).val();
+            var widget = this.widgets.find(function(w) {return w.get("name") == selected});
+            this.$('.widget-description').html(widget.get("description"));
+            var $filters = $('select[name="filter"]').empty();
+            _(widget.get("filters")).each(function(val) {
+                $filters.append($('<option>').text(val));
+            });
+            $filters.attr("disabled", widget.get("filters").length == 0);
+
+            console.log(widget.toJSON());
+            this.$('.enrichment-opt').toggle(widget.get("widgetType") === "enrichment");
+            App.im.fetchModel(function(m) {
+                var valid_classes = __(widget.get("targets"))
+                    .map(function(x) { return m.getSubclassesOf(x) })
+                    .flatten()
+                    .sort()
+                    .uniq()
+                    .value();
+                if (!_(valid_classes).include(self.model.get("type"))) {
+                    self.$('.apology').show();
+                    var $types = self.$('.widget-types').empty();
+                    _(valid_classes).each(function(vc) {
+                        $types.append(self.make("li", {}, vc));
+                    });
+                    return;
+                }
+                self.$('.apology').hide();
+                var wv;
+                if (widget.get("widgetType") === "enrichment") {
+                    wv = new EnrichmentWidgetView(widget, self.model);
+                } else {
+                    wv = new ChartWidgetView(widget, self.model);
+                }
+                console.log(wv);
+                wv.render();
+                $('#widget-display').empty().append(wv.el);
+            });
+            return false;
+
+        },
+
+        render: function() {
+            var self = this;
+            this.$el.append(Assets.WidgetView.content);
+            this.$("form").submit(function(e) {
+                e.stopPropagation();
+            });
         },
 
     });

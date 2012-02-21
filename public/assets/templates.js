@@ -26,6 +26,57 @@ _.extend(window.Assets, {
 })();
 
 (function() {
+    _.extend(window.Assets, {
+        EnrichmentWidget: {
+            table: '<table class="table table-bordered table-striped">' +
+                 '<thead>' +
+                 '  <th>Item</th><th>P-Value</th><th>Matches</th>' +
+                 '</thead>' +
+                 '</table>',
+            rowTemplate: _.template(
+            '<tr>' +
+            '  <td><a href="<%= item %>"><%= description %></a></td>' + 
+            '  <td><%= pvalue %></td>' + 
+            '  <td><a class="match-count" href="#"><% print(matches.length) %></a>' + 
+            '      <div class="enrichment-matches">' + 
+            '       <ul>' +
+            '       <% _(matches).each(function(m) { %>' +
+            '         <li><%= m %></li>' +
+            '       <% }); %>' +
+            '       </ul>' +
+            '  </td>' +
+            '</tr>')
+        },
+        WidgetView: {
+            optionTemplate: _.template('<option value="<%= name %>"><%= title %></option>'),
+            content: 
+        '<div>' +
+        '<h3 class="widget-description"></h3>' + 
+        '<div class="apology alert alert-block alert-info">' + 
+        ' <h4 class="alert-heading">Wrong List Type</h4>' +
+        ' This widget is not compatible with the objects in the selected list.' + 
+        ' please choose another widget, or another list. This widget only works' + 
+        ' with lists of the following types:' +
+        ' <ul class="widget-types"></ul>' +
+        '</div>' +
+        '<form class="well"> ' + 
+        '   <select name="widget">' +
+        '   </select>' +
+        '   <select name="filter"></select>' +
+        '   <select name="correction" class="enrichment-opt">' +
+        '     <option selected>Bonferroni</option>' + 
+        '     <option>Benjamini and Hochberg</option>' +
+        '     <option>Holm-Bonferroni</option>' +
+        '     <option><i>none</i></option>' + 
+        '   </select>' +
+        '   <input type="text" id="max-p-value" class="enrichment-opt" value="0.05">' + 
+        '</form>' +
+        '<div id="widget-display"></div>'
+        }
+    });
+})();
+
+(function() {
 _.extend(window.Assets, {
     QuickSearch: {
         header: '<h1>Quick Search Results</h1>',
